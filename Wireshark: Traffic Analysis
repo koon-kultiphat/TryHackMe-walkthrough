@@ -2,7 +2,26 @@
 # TryHackMe SOC1
 # Wireshark: Traffic Analysis
 
-## Task 1: Nmap Scan
-### TCP Flags in a nutshell:
+## Task 2: Nmap Scan
 
+###What is the total number of the “TCP Connect” scans?
+
+**Answer: 1000**
+
+'tcp.flags.syn==1 and tcp.flags.ack==0 and tcp.window_size > 1024'
+
+หากเราใช้แค่ 'tcp.flags.syn==1' อย่างเดียว เราจะเจอทั้ง packet ที่เริ่มการเชื่อมต่อปกติและ packet ที่ฝั่ง Server ตอบกลับมา (SYN, ACK) ทำให้การนับจำนวนผิดพลาด
+  1. 'tcp.flags.syn==1 and tcp.flags.ack==0'
+    - เป็นการระบุตัวตนในการทำ Three-way Handshake
+    - **SYN = 1, ACK = 0** : คือลักษณะของ Packet ที่เครื่องต้นทางส่งไปขอเชื่อมต่อ (Connection Request) เท่านั้น
+    - ถ้าเป็นเครื่องปลายทางตอบกลับมา มันจะเป็น **SYN = 1, ACK = 1** (ซึ่งจะ๔ุกคัดออกด้วยคำสั่ง ack == 0)
+    - **สรุป**: ส่วนนี้ช่วยให้เรานับเฉพาะจำนวนครั้งที่พยายามเริ่มเชื่อมต่อจากฝั่งคนแสกนเท่านั้น
+  2. 'tcp.window_size > 1024'
+    - **Window Size**: คือดารบอกอีกฝั่งว่าเครื่องฉันรับข้อมูลได้ทีละเท่าไหร่
+    - **Why > 1024 ??**
+      - **OS Behavior**: ระบบปฏิบัติการทั่วไป Windows,Linux เวลาจะทำหาร Connect แบบปกติ (TCP Connect) มักจะกำหนดค่า Window Size ไว้ค่อนข้างสูง เช่น 8192, 16384 หรือ 64240 เพื่อความเร็ว
+      - **Nmap/Scanner Behavior**: เครื่องมือแสกนบางตัว หรือการส่ง Packet ที่สร้างขึ้นเอง (Raw Packet) ในบางโหมด อาจจะใช้ Window Size ขนาดเล็กหรือค่าคงที่บางอย่าง
+      - **Filtering Noise**: การระบุค่าที่มากกว่า 1024 มักจะช่วยกรองพวก Packet ขยะ หรือที่มาจากอุปกรณ์ขนาดเล็กออกไป เหลือแต่ Traffic ที่เกิดจากการพยายามเชื่อมต่อจาก OS จริงๆ
+> [!WARNING]
+> ในชีวิตจริง ผู้บุกรุกบางคนอาจจะแสกนโดยใช้ Window Size ต่ำๆ เพื่อหลบการตรวจจับได้
 
