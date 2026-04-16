@@ -25,3 +25,51 @@
 > [!WARNING]
 > ในชีวิตจริง ผู้บุกรุกบางคนอาจจะแสกนโดยใช้ Window Size ต่ำๆ เพื่อหลบการตรวจจับได้
 
+###Which scan type is used to scan the TCP port 80?
+
+**Answer: tcp connect**
+
+'tcp.port == 80'
+
+**3 main types of TCP Scan**
+1. TCP Connect Scan : Open Scan เป็นการแสกนที่ปกติที่สุด เป็นการคุยกันทั่วไป จุดสังเกตใน Wireshark คือจะเห็นการเชื่อมต่อครบ 3 ขั้นตอน SYN->SYN, ACK->ACK
+2. TCP SYN Scan : Half-Open Scan 'nmap -sS' เป็นที่นิยมที่สุดเพราะไม่สร้างการเชื่อมที่สมบูรณ์ การเชื่อมจะเป็น SYN->SYN, ACK->RST คนแสกนจะ Reset เพื่อตัดการเชื่อมก่อนจะจบ Handshake
+3. TCP Stealth Scan : เป็นการส่ง Packet แปลกๆ เพื่อดูว่าเป้าหมายจะตอบกลับอย่างไร
+  - **NULL SCAN** : ส่ง Packet ที่ไม่มี Flag เลย 'nmap -sN'
+  - **FIN Scan** : ส่งเฉพาะ Flag FIN ไป 'nmap -sF'
+  - **Xmas Scan** : ส่ง Flag FIN, PSH, URG ไปพร้อมกัน เหมือนเปิดไฟต้นคริสต์มาส 'nmap -sX'
+
+**Faster Way to Detect in Wireshark**
+'Statistic > Conversations > TCP*'
+ถ้าเห็นการเชื่อมต่อที่มีจำนวน Packet แค่ 2-3 Packets แต่เกิดขึ้นกับหลายๆ Ports ในเวลาไล่เลี่ยกันจาก IP เดียวกัน นั้นคือสัญญาณของการแสกนแน่นอน
+
+###How many “UDP close port” messages are there?
+
+**Answer: 1083**
+
+'icmp.type==3 and icmp.code==3'
+
+เหตุผลที่ต้องหา icmp เพื่อดูว่า UDP port ไหนปิด เพราะเป็นธรรมชาติของ UDP (User Datagram Protocol)/
+UDP เป็น Connectionless มันจึงไม่มีการตอบกลับที่เป็นระบบเหมือน TCP ที่มี SYN, ACK or RST /
+ดังนั้น เวลาที่เราส่งข้อมูล UDP ไปยังเครืองเป้าหมาย:
+1. **If Port open** : Apprication ที่รอรับข้อมูลอยู่อาจจะตอบกลับด้วย UDP หรืออาจจะเงียบไปเลยก็ได้ เช่น DNS or SNMP
+2. **If Port close** : ระบบปฏิบัติการของเครื่องเป้าหมายจะส่งข้อความผิดพลากกลับมาบอกเรา ซึ่งข้อความผิดพลาดนี้ไม่ได้ใช้ UDP ส่ง แต่มันใช้ ICMP ส่งแทน
+
+**กลไกการทำงาน: ICMP Destination Unreachable**
+เมื่อคุณ Scan UDP ไปยัง Port ที่ปิดอยู่ สิ่งที่จะเกิดขึ้นในทาง Network คือ:
+1. เครื่องคนแสนส่ง UDP Packet ไปยังเป้าหมาย เช่น Port 80, 53 or random
+2. เครื่องเป้าหมายรับ Packet มาแล้วพบว่า **"ไม่มีแอปพลิเคชันไหนเปิดรออยู่ที่ Port นี้"**
+3. Network Stack ของเครื่องเป้าหมายจะสร้าง Packet **ICMP Type3, Code3** ซึ่งมีความหมายว่า **"Destination Unreachable (Port Unreachable)"**
+
+**สรุป**/
+ที่เราหาด้วย icmp เพราะ UDP ไม่สามารถพูดได้เวลามันพังหรือว่าปิดอยู่ จึงต้องใช้ **ICMP** ซึ่งทำหน้าที่แจ้งเตือนข้อผิดพลาดใน Network ในการบอกเราแทน
+
+###Which UDP port in the 55–70 port range is open?###
+
+**Answer: 68**
+
+'udp.dstport >= 55 and udp.port <= 70'
+
+After filtering out destination ports between 50 and 70, there are fourt ports identified that use udp./
+But if we analyze the packet details of each icmp packets with a“Destination unreachable”,/
+we will identify that ports 67, 53, and 69 are not open.
